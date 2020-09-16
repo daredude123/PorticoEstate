@@ -426,6 +426,7 @@
 
 			$event['show_link'] = self::link(array('menuaction' => 'bookingfrontend.uievent.show',
 						'id' => $event['id']));
+			$event['participant_limit'] = $event['participant_limit'] ? $event['participant_limit'] : (int)$config->config_data['participant_limit'];
 
 			self::render_template_xsl('event_info', array('event' => $event, 'orginfo' => $orginfo,
 				'user_can_delete_bookings' => $user_can_delete_bookings));
@@ -480,10 +481,6 @@
 
 			$event['number_of_participants'] = $number_of_participants;
 
-//			$participant_registration_link =  $GLOBALS['phpgw']->link('/bookingfrontend/', array('menuaction' => 'bookingfrontend.uiparticipant.add',
-//				'reservation_type' => 'event',
-//				'reservation_id' => $event['id']), true, true);
-
 			$config = CreateObject('phpgwapi.config', 'booking')->read();
 			$external_site_address = !empty($config['external_site_address'])? $config['external_site_address'] : $GLOBALS['phpgw_info']['server']['webserver_url'];
 
@@ -493,13 +490,15 @@
 				. "&reservation_id={$event['id']}";
 
 			$event['participant_registration_link'] = $participant_registration_link;
+			$event['participanttext'] = !empty($config['participanttext'])? $config['participanttext'] :'';
+			$event['participant_limit'] = $event['participant_limit'] ? $event['participant_limit'] : (int)$config['participant_limit'];
 
 			phpgw::import_class('phpgwapi.phpqrcode');
 			$code_text					 = $participant_registration_link;
 			$filename					 = $GLOBALS['phpgw_info']['server']['temp_dir'] . '/' . md5($code_text) . '.png';
 			QRcode::png($code_text, $filename);
 			$event['encoded_qr']	 = 'data:image/png;base64,' . base64_encode(file_get_contents($filename));
-
+//			_debug_array($event);
 			self::render_template_xsl('event', array('event' => $event, 'orginfo' => $orginfo));
 		}
 
