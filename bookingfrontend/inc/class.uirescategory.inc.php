@@ -1,15 +1,15 @@
 <?php
-
 phpgw::import_class('booking.uirescategory');
 
 class bookingfrontend_uirescategory extends booking_uirescategory
 {
 
 	public $public_functions = array
-	(
-		'show' => true,
+	(   'index_json' => true,
+		'query' => true,
+		'add' => true,
 		'edit' => true,
-		'index' => true,
+		'show' => true
 	);
 
 	protected $module;
