@@ -85,7 +85,7 @@ $(document).ready(function () {
     JqueryPortico.autocompleteHelper(phpGWLink('bookingfrontend/', {menuaction: 'bookingfrontend.uibuilding.index'}, true),
         'field_building_name', 'field_building_id', 'building_container');
 
-    JqueryPortico.autocompleteHelper(phpGWLink('bookingfrontend/', {menuaction: 'bookingfrontend.uieventsearch.get_facilityTypes'}, true),
+    JqueryPortico.autocompleteHelper(phpGWLink('bookingfrontend/', {menuaction: 'bookingfrontend.uirescategory.index'}, true),
         'field_type_name', 'field_type_id', 'buildingtype_container');
     viewmodel = new AppViewModel();
     getUpcomingEvents();
