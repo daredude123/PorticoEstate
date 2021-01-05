@@ -6,8 +6,6 @@ phpgw::import_class('bookingfrontend.bouser');
 phpgw::import_class('booking.boorganization');
 phpgw::import_class('booking.bobuilding');
 
-
-
 class bookingfrontend_uieventsearch extends booking_uicommon
 {
 
@@ -58,7 +56,6 @@ class bookingfrontend_uieventsearch extends booking_uicommon
 		$config->read();
 		phpgwapi_jquery::load_widget("core");
 
-
 		self::add_javascript('bookingfrontend', 'aalesund', 'event_search.js', 'text/javascript', true);
 		self::render_template_xsl('event_search', array('event_search' => $event_search));
 
@@ -80,9 +77,6 @@ class bookingfrontend_uieventsearch extends booking_uicommon
 		return $orgs_map;
 	}
 
-	/***
-	 * Metode for å hente events til søkesiden
-	 */
 	public function upcomingEvents()
 	{
 		$orgID = phpgw::get_var('orgID', 'string', 'REQUEST', null);
@@ -100,9 +94,7 @@ class bookingfrontend_uieventsearch extends booking_uicommon
 
 	public function index()
 	{
-		_debug_json($GLOBALS);
 		phpgwapi_jquery::load_widget('autocomplete');
-
 		if (phpgw::get_var('phpgw_return_as') == 'json')
 		{
 			return $this->query();
@@ -112,7 +104,5 @@ class bookingfrontend_uieventsearch extends booking_uicommon
 	}
 
 	public function query()
-	{
-		// TODO: Implement query() method.
-	}
+	{}
 }
