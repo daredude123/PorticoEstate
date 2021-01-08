@@ -51,7 +51,7 @@
 		{
 			parent::__construct($appname);
 			$this->_db2		 = clone($this->_db);
-			$this->contacts	 = CreateObject('phpgwapi.contacts');
+			$this->contacts	 = CreateObject('phpgwapi.contacts', false);
 		}
 
 		/**
@@ -372,6 +372,7 @@ JS;
 					$input_type = $input_type_array[$attributes['datatype']];
 
 					$attributes['add_img'] = $GLOBALS['phpgw']->common->image('phpgwapi', 'add2');
+					$attributes['delete_img'] = $GLOBALS['phpgw']->common->image('phpgwapi', 'recycle-bin-line');
 					$attributes['lang_new_value'] = lang('New value for multiple choice');
 
 					if ($attributes['datatype'] == 'CH')

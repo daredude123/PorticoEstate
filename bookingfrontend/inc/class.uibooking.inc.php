@@ -33,9 +33,12 @@
 
 		private function item_link( &$item, $key )
 		{
-			if (in_array($item['type'], array('allocation', 'booking', 'event')))
-				$item['info_url'] = $this->link(array('menuaction' => 'bookingfrontend.ui' . $item['type'] . '.info',
+			if (isset($item['type']) && in_array($item['type'], array('allocation', 'booking', 'event')))
+			{
+				$item['info_url'] = $this->link(array(
+					'menuaction' => 'bookingfrontend.ui' . $item['type'] . '.info',
 					'id' => $item['id']));
+			}
 		}
 
 		public function get_freetime()
@@ -78,6 +81,8 @@
 				{
 					$booking['resource_link'] = $this->link(array('menuaction' => 'bookingfrontend.uiresource.schedule',
 						'id' => $booking['resource_id']));
+					$booking['link'] = $this->link(array('menuaction' => 'bookingfrontend.uibooking.show',
+						'id' => $booking['id']));
 					array_walk($booking, array($this, 'item_link'));
 
 					$results[] = $booking;
@@ -321,7 +326,7 @@
 			$activities = $this->activity_bo->fetch_activities();
 			$activities = $activities['results'];
 			$groups = $this->group_bo->so->read(array('filters' => array('organization_id' => $allocation['organization_id'],
-					'active' => 1)));
+					'active' => 1), 'results' => -1));
 			$groups = $groups['results'];
 			$booking['organization_name'] = $allocation['organization_name'];
 			$resources_full = $this->resource_bo->so->read(array('filters' => array(
@@ -877,6 +882,8 @@
 
 			if ($config->config_data['user_can_delete_bookings'] != 'yes')
 			{
+				phpgwapi_cache::message_set('user can not delete bookings', 'error');
+
 				$booking = $this->bo->read_single($id);
 				$original_from = $booking['from_'];
 				$errors = array();

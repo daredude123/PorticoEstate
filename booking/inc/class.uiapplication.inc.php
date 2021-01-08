@@ -398,7 +398,6 @@
 			$data['datatable']['actions'][] = array();
 
 			self::render_template_xsl('datatable_jquery', $data);
-//			self::render_template('datatable', $data);
 		}
 
 		public function query()
@@ -637,7 +636,7 @@
 					$to = ($to) ? date("Y-m-d H:i:s", phpgwapi_datetime::date_to_timestamp($to)) : "";
 				}
 
-				$application['dates'] = array_map(array(self, '_combine_dates'), $_POST['from_'], $_POST['to_']);
+				$application['dates'] = array_map(array($this, '_combine_dates'), $_POST['from_'], $_POST['to_']);
 				$application['active'] = '1';
 				$application['status'] = 'NEW';
 				$application['created'] = 'now';
@@ -800,7 +799,7 @@
 					$document = array(
 						'category' => 'other',
 						'owner_id' => $application['id'],
-						'files' => $this->get_files()
+						'files' => $this->get_files_from_post()
 					);
 					$document_errors = $document_application->bo->validate($document);
 
@@ -879,6 +878,7 @@
 			$_building = $this->building_bo->so->read_single($building_id);
 
 			array_set_default($application, 'building_name', $_building['name']);
+			array_set_default($application, 'audience', array());
 
 			if (strstr($application['building_name'], "%"))
 			{
@@ -889,11 +889,11 @@
 
 			if (phpgw::get_var('from_', 'string'))
 			{
-				$default_dates = array_map(array(self, '_combine_dates'), phpgw::get_var('from_', 'string'), phpgw::get_var('to_', 'string'));
+				$default_dates = array_map(array($this, '_combine_dates'), phpgw::get_var('from_', 'string'), phpgw::get_var('to_', 'string'));
 			}
 			else
 			{
-				$default_dates = array_map(array(self, '_combine_dates'), '', '');
+				$default_dates = array_map(array($this, '_combine_dates'), array(), array());
 			}
 			array_set_default($application, 'dates', $default_dates);
 
@@ -1125,7 +1125,11 @@
 				'menuaction' => 'bookingfrontend.uiapplication.add_contact'
 			));
 
-			$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
+			if(!$orgnr = phpgw::get_var('session_org_id', 'int', 'GET'))
+			{
+				$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);			
+			}
+
 			$errors = array();
 
 			$partial2 = array();
@@ -1482,7 +1486,7 @@
 					$to = date("Y-m-d H:i:s", phpgwapi_datetime::date_to_timestamp($to));
 				}
 
-				$application['dates'] = array_map(array(self, '_combine_dates'), $_POST['from_'], $_POST['to_']);
+				$application['dates'] = array_map(array($this, '_combine_dates'), $_POST['from_'], $_POST['to_']);
 
 				$errors = $this->validate($application);
 
@@ -1521,10 +1525,6 @@
 			$this->install_customer_identifier_ui($application);
 			$application['customer_identifier_types']['ssn'] = 'SSN';
 			$application['audience_json'] = json_encode(array_map('intval', $application['audience']));
-			//test
-
-			//			self::render_template('application_edit', array('application' => $application, 'activities' => $activities, 'agegroups' => $agegroups, 'audience' => $audience));
-
 
 			if (phpgw::get_var('phpgw_return_as', 'string', 'GET') == 'json' )
 			{
@@ -1907,7 +1907,7 @@
 					$document_application = createObject('booking.uidocument_application');
 
 					$oldfiles = $document_application->bo->so->read(array('filters' => array('owner_id' => $application['id']), 'results' =>'all'));
-					$files = $this->get_files();
+					$files = $this->get_files_from_post();
 					$file_exist = false;
 
 					if ($oldfiles['results'])
@@ -1926,7 +1926,7 @@
 					$document = array(
 						'category' => 'other',
 						'owner_id' => $application['id'],
-						'files' => $this->get_files()
+						'files' => $this->get_files_from_post()
 					);
 					$document_errors = $document_application->bo->validate($document);
 

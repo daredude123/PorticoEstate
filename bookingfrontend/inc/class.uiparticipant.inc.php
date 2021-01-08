@@ -116,6 +116,7 @@
 			}
 
 			$errors							 = array();
+			$sms_error_message = '';
 			if ($_SERVER['REQUEST_METHOD'] == 'POST' && $register_type && $enable_register_form)
 			{
 				$user_inputs = (array)phpgwapi_cache::system_get('bookingfrontendt', 'add_participant');
@@ -172,13 +173,32 @@
 				}
 
 				$number_of_participants = $this->bo->get_number_of_participants($reservation_type, $reservation_id);
+				$number_of_participants_registered_in = $this->bo->get_number_of_participants($reservation_type, $reservation_id, true);
 
-				if( !empty($reservation['participant_limit']) && $participant['quantity']
-					&& ($register_type == 'register_pre' || $register_type == 'register_in'))
+				if( !empty($reservation['participant_limit']) && $participant['quantity'])
 				{
-					if(($number_of_participants  + $participant['quantity']) > (int) $reservation['participant_limit'])
+					if($register_type == 'register_pre')
 					{
-						$errors = array('quantity' =>"Antall er begrenset til {$reservation['participant_limit']}");
+						if(($number_of_participants  + $participant['quantity']) > (int) $reservation['participant_limit'])
+						{
+							$sms_error_message = "Det gikk ikke: antall er begrenset til {$reservation['participant_limit']}.";
+							$errors = array('quantity' => $sms_error_message);
+						}
+						else if($participant['id'])
+						{
+							$sms_error_message = "Det gikk ikke: du er allerede innregistrert med antall {$participant['quantity']}.\n";
+							$sms_error_message .= "Du kan eventuelt forsøke å registrere deg ut - og deretter inn igjen med nytt antall.";
+							$errors = array('quantity' => $sms_error_message);
+						}
+					}
+					else if($register_type == 'register_in')
+					{
+						if(($participant['id'] && ($number_of_participants_registered_in  + $participant['quantity']) > (int) $reservation['participant_limit'])
+							|| (!$participant['id'] && ($number_of_participants  + $participant['quantity']) > (int) $reservation['participant_limit']))
+						{
+							$sms_error_message = "Det gikk ikke: antall er begrenset til {$reservation['participant_limit']}.";
+							$errors = array('quantity' => $sms_error_message);
+						}
 					}
 				}
 
@@ -189,6 +209,12 @@
 						$participant['from_'] = $participant['from_'] ? $participant['from_'] : null;
 						$participant['to_'] = $participant['to_'] ? $participant['to_'] : null;
 						$receipt = $this->bo->update($participant);
+					}
+					else if(empty($participant['id']) && $register_type == 'register_out')
+					{
+						$sms_error_message = "Du har forsøkt å avbestille tid - men nummeret ditt er ikke registrert, og kan ikke benyttes for avbestilling."
+						. "\n Begrensning: {$reservation['participant_limit']}."
+						. "\n Totalt antall påmeldt: {$number_of_participants}";
 					}
 					else
 					{
@@ -255,6 +281,7 @@
 
 					if($config['participant_limit_sms'])
 					{
+						$sms_text = $sms_error_message ? $sms_error_message : $sms_text;
 						try
 						{
 							$sms_service = CreateObject('sms.sms');
@@ -279,12 +306,41 @@
 			}
 			else
 			{
-				$lang_register_out = lang('Register out');
+				$lang_register_out = lang('Register out') . ' / Avbestill';
+			}
+
+
+			if($sms_error_message && $participant['phone'] && $config['participant_limit_sms'])
+			{
+				try
+				{
+					$sms_service = CreateObject('sms.sms');
+					$sms_res = $sms_service->websend2pv($this->account, $participant['phone'], "Hei.\n{$sms_error_message} \nDenne meldingen kan ikke besvares");
+				}
+				catch (Exception $ex)
+				{
+					//implement me
+					$this->log('sms_error', $ex->getMessage());
+				}
+
 			}
 
 			$this->flash_form_errors($errors);
 
 			$number_of_participants = $this->bo->get_number_of_participants($reservation_type, $reservation_id);
+			$number_of_participants_registered_in = $this->bo->get_number_of_participants($reservation_type, $reservation_id, true);
+
+			$participant_limit		 = !empty($reservation['participant_limit']) ? $reservation['participant_limit'] : 0;
+
+			if($participant_limit && ($number_of_participants >= $participant_limit))
+			{
+				$enable_register_pre = null;
+				$enable_register_in = null;
+				if($number_of_participants_registered_in < $number_of_participants)
+				{
+					$enable_register_in = $enable_register_in ? $enable_register_in : null;
+				}
+			}
 
 			$name = '';
 
@@ -305,7 +361,6 @@
 				'enable_register_out'	 => $enable_register_out,
 				'enable_register_form'	 => $enable_register_form,
 				'number_of_participants' => $number_of_participants,
-				'lang_register_in'		 => lang('Registration'),
 				'lang_register_out'		 => $lang_register_out,
 				'when'					 => $when,
 				'phone'					 => $participant['phone'],
@@ -313,7 +368,7 @@
 				'quantity'				 => $participant['quantity'],
 				'name'					 => $name,
 				'reservation'			 => $reservation,
-				'participant_limit'		 => !empty($reservation['participant_limit']) ? $reservation['participant_limit'] : 0,
+				'participant_limit'		 => $participant_limit,
 				'form_action'			 => self::link(array('menuaction'		 => 'bookingfrontend.uiparticipant.add',
 					'reservation_type'	 => $reservation_type, 'reservation_id'	 => $reservation_id)),
 			);
@@ -335,7 +390,7 @@
 				return array();
 			}
 
-			
+
 			$_REQUEST['filter_reservation_id'] = phpgw::get_var('filter_reservation_id', 'int', 'REQUEST', -1);
 			$participants = $this->bo->read();
 

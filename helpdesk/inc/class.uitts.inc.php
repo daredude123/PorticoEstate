@@ -1184,12 +1184,12 @@ HTML;
 					(
 						'url'	=> $GLOBALS['phpgw']->link('/index.php',array('menuaction'=> 'helpdesk.uitts.index', 'parent_cat_id' => $_category['id'])),
 						'text'	=> $_category['name'],
+						'icon'	=> $_category['icon'],
 					);
 				}
 
 				$GLOBALS['phpgw']->xslttpl->add_file(array('tts'));
 				$GLOBALS['phpgw']->xslttpl->set_var('phpgw', array('navigate' => array('sub_menu' => $sub_menu)));
-	//			$GLOBALS['phpgw']->xslttpl->set_var('phpgw',array('columns' => $data));
 				return;
 			}
 
@@ -2615,7 +2615,7 @@ JS;
 						'resizeable' => true),
 					array('key' => 'value_new_value', 'label' => lang('New value'), 'sortable' => true,
 						'resizeable' => true)),
-				'data' => json_encode($record_history),
+				'data' => htmlspecialchars(json_encode($record_history), ENT_QUOTES, 'UTF-8'),
 				'config' => array(
 					array('disableFilter' => true),
 					array('disablePagination' => true),
@@ -2677,12 +2677,13 @@ JS;
 				$attach_file_def[] = array('key' => 'delete_file', 'label' => lang('Delete file'), 'sortable' => false,
 					'resizeable' => true, 'formatter' => 'FormatterCenter');
 			}
+
 			$datatable_def[] = array
 				(
 				'container' => 'datatable-container_2',
 				'requestUrl' => "''",
 				'ColumnDefs' => $attach_file_def,
-				'data' => json_encode($content_files),
+				'data' => htmlspecialchars(json_encode($content_files), ENT_QUOTES, 'UTF-8'),
 				'config' => array(
 					array('disableFilter' => true),
 					array('disablePagination' => true)
@@ -2765,7 +2766,7 @@ JS;
 				(
 				'container' => 'datatable-container_7',
 				'requestUrl' => "''",
-				'data' => json_encode($external_messages),
+				'data' => htmlspecialchars(json_encode($external_messages), ENT_QUOTES, 'UTF-8'),
 				'ColumnDefs' => $external_messages_def,
 				'config' => array(
 					array(

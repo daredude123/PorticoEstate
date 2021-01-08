@@ -1270,6 +1270,7 @@
 				{
 					$org = $this->organization_bo->read_single($reservation['organization_id']);
 					$log_customer_name = $org['name'];
+					$customer_number =  $org['customer_number'];
 				}
 				else
 				{
@@ -1294,7 +1295,18 @@
 					}
 				}
 
-				if ($stored_header == array() || $stored_header['tekst2'] != $this->get_customer_identifier_value_for($reservation))
+				if ($type == 'internal')
+				{
+					//Nøkkelfelt, kundens personnr/orgnr.
+					$check_customer_identifier = $this->get_customer_identifier_value_for($reservation);
+				}
+				else
+				{
+					//Nøkkelfelt, kundens personnr/orgnr. - men differensiert for undergrupper innenfor samme orgnr
+					$check_customer_identifier = $this->get_customer_identifier_value_for($reservation) . '::' . $customer_number;
+				}
+
+				if ($stored_header == array() || $stored_header['tekst2'] != $check_customer_identifier)
 				{
 					$order_id = $sequential_number_generator->increment()->get_current();
 					$export_info[] = $this->create_export_item_info($reservation, $order_id);
@@ -1312,12 +1324,49 @@
 					$header['currency'] = $currency;
 					$header['deliv_date'] = $header['confirm_date'];
 
+					if (!empty($config->config_data['att_1_id']))
+					{
+						$header['att_1_id'] = str_pad(strtoupper(substr($config->config_data['att_1_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_2_id']))
+					{
+						$header['att_2_id'] = str_pad(strtoupper(substr($config->config_data['att_2_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_3_id']))
+					{
+						$header['att_3_id'] = str_pad(strtoupper(substr($config->config_data['att_3_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_4_id']))
+					{
+						$header['att_4_id'] = str_pad(strtoupper(substr($config->config_data['att_4_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_5_id']))
+					{
+						$header['att_5_id'] = str_pad(strtoupper(substr($config->config_data['att_5_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_6_id']))
+					{
+						$header['att_6_id'] = str_pad(strtoupper(substr($config->config_data['att_6_id'], 0, 2)), 2, ' ');
+					}
+					if (!empty($config->config_data['att_7_id']))
+					{
+						$header['att_7_id'] = str_pad(strtoupper(substr($config->config_data['att_7_id'], 0, 2)), 2, ' ');
+					}
+
 					//Skal leverer oppdragsgiver, blir et nr. pr. fagavdeling. XXXX, et pr. fagavdeling
 					if (isset($config->config_data['dim_value_1']))
 					{
 						$header['dim_value_1'] = str_pad(strtoupper(substr($account_codes['unit_number'], 0, 12)), 12, ' ');
 					}
 
+					if (isset($config->config_data['dim_value_2']))
+					{
+						$header['dim_value_2'] = str_pad(substr($account_codes['dim_value_2'], 0, 12), 12, ' ');
+					}
+					if (isset($config->config_data['dim_value_3']))
+					{
+						$header['dim_value_3'] = str_pad(substr($account_codes['dim_value_3'], 0, 12), 12, ' ');
+					}
 					if (isset($config->config_data['dim_value_4']))
 					{
 						$header['dim_value_4'] = str_pad(substr($account_codes['dim_value_4'], 0, 12), 12, ' ');
@@ -1327,9 +1376,17 @@
 					{
 						$header['dim_value_5'] = str_pad(substr($account_codes['dim_value_5'], 0, 12), 12, ' ');
 					}
+					if (isset($config->config_data['dim_value_6']))
+					{
+						$header['dim_value_6'] = str_pad(substr($account_codes['dim_value_6'], 0, 12), 12, ' ');
+					}
+					if (isset($config->config_data['dim_value_7']))
+					{
+						$header['dim_value_7'] = str_pad(substr($account_codes['dim_value_7'], 0, 12), 12, ' ');
+					}
 
-					//Nøkkelfelt, kundens personnr/orgnr.
-					$stored_header['tekst2'] = $this->get_customer_identifier_value_for($reservation);
+					//Nøkkelfelt, kundens personnr/orgnr. - men differensiert for undergrupper innenfor samme orgnr
+					$stored_header['tekst2'] = $check_customer_identifier;
 
 					if ($type == 'internal')
 					{
@@ -1339,6 +1396,7 @@
 					else
 					{
 						$header['tekst2'] = str_pad(substr($this->get_customer_identifier_value_for($reservation), 0, 12), 12, ' ');
+						$header['ext_ord_ref'] = str_pad(substr(iconv("utf-8", "ISO-8859-1//TRANSLIT", $customer_number), 0, 15), 15, ' ');
 					}
 
 					$header['line_no'] = '0000'; //Nothing here according to example file but spec. says so
@@ -1408,6 +1466,14 @@
 					if (isset($config->config_data['dim_5']))
 					{
 						$item['dim_5'] = str_pad(strtoupper(substr($account_codes['project_number'], 0, 12)), 12, ' ');
+					}
+					if (isset($config->config_data['dim_6']))
+					{
+						$item['dim_6'] = str_pad(substr($account_codes['dim_6'], 0, 4), 4, ' ');
+					}
+					if (isset($config->config_data['dim_7']))
+					{
+						$item['dim_7'] = str_pad(substr($account_codes['dim_7'], 0, 4), 4, ' ');
 					}
 
 					$item['line_no'] = str_pad($line_no, 4, 0, STR_PAD_LEFT);
