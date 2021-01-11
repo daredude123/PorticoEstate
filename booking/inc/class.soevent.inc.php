@@ -621,32 +621,6 @@
 				'org_num' => $this->db->f('org_num', false),
 				'org_id' => $this->db->f('org_id', false),
 			);
-
-		}
-		return $results;
-	}
-
-	private function getFacilities($event_id)
-	{
-		$sqlQuery ="select e.id as event_id, e.name as event_name,rc.id as rescat_id, rc.name as rescat_name, r.id as resource_id, r.name as resource_name
-					from bb_rescategory rc, bb_event_resource er, bb_resource r , bb_event e
-					where e.id = er.event_id 
-						and er.resource_id = r.id 
-						and rc.id = r.rescategory_id
-						and e.id = '$event_id'";
-
-		$this->db->query($sqlQuery);
-		$results = array();
-		$facilityInfo = new stdClass();
-		while ($this->db->next_record()) {
-			$facilityInfo->event_name = $this->db->f('event_name',false);
-			$facilityInfo->event_id = $this->db->f('event_id',false);
-			$facilityInfo->resource_category_id = $this->db->f('rescat_id',false);
-			$facilityInfo->resource_category_name = $this->db->f('rescat_name',false);
-			$facilityInfo->resource_id = $this->db->f('resource_id',false);
-			$facilityInfo->resource_name = $this->db->f('resource_name',false);
-			array_push($results, $facilityInfo);
-
 		}
 		return $results;
 	}
