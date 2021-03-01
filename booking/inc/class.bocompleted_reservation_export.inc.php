@@ -25,8 +25,17 @@
 				$to_date = date('Y-m-d', phpgwapi_datetime::date_to_timestamp($filter_to));
 				$where_clauses[] = "%%table%%" . sprintf(".to_ <= '%s 23:59:59'", $GLOBALS['phpgw']->db->db_addslashes($to_date));
 			}
+			
+			
+			/**
+			 * Todo - filter on already processed
+			 */
+			if(false)
+			{
+				$where_clauses[] = "%%table%%.export_file_id IS NOT NULL";
+			}
 
-			if (count($where_clauses) > O)
+			if (count($where_clauses) > 0)
 			{
 				$params['filters']['where'] = $where_clauses;
 			}

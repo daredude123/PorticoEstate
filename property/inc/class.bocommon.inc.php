@@ -1598,6 +1598,18 @@
 			$export_format	 = isset($GLOBALS['phpgw_info']['user']['preferences']['common']['export_format']) && $GLOBALS['phpgw_info']['user']['preferences']['common']['export_format'] ? $GLOBALS['phpgw_info']['user']['preferences']['common']['export_format'] : 'csv';
 			$php_version	 = (float)PHP_VERSION;
 
+			$html2text			 = createObject('phpgwapi.html2text');
+			if (isset($list) && is_array($list))
+			{
+				foreach ($list as &$entry)
+				{
+					foreach ($entry as $col => &$value)
+					{
+						$html2text->setHTML($value);
+						$value = trim($html2text->getText());
+					}
+				}
+			}
 			switch ($export_format)
 			{
 				case 'csv':
@@ -2138,7 +2150,6 @@
 		 */
 		function collect_locationdata( $values = array(), $insert_record = array() )
 		{
-//_debug_array($insert_record);die();
 			if ($insert_record)
 			{
 				if (isset($insert_record['location']) && is_array($insert_record['location']))
@@ -2240,7 +2251,6 @@
 					)
 				);
 			}
-
 			return $values;
 		}
 

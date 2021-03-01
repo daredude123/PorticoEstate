@@ -4,7 +4,7 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta name="author" content="{system} http://savannah.nongnu.org/projects/fmsystem/">
+		<meta name="author" content="{system} https://github.com/PorticoEstate/PorticoEstate">
 		<meta name="description" content="{system} login screen, working environment powered by Portico Estate">
 		<meta name="keywords" content="{system} login screen, phpgroupware, groupware, groupware suite, facilities management, CAFM">
 		<meta name="robots" content="noindex,nofollow">
@@ -70,19 +70,22 @@
 
 
 		</script>
-		<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css" />
-		<script src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
+		<script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js" data-cfasync="false"></script>
 		<script>
 			window.addEventListener("load", function ()
 			{
 				window.cookieconsent.initialise({
-					"palette": {
+					palette: {
 						"popup": {
 							"background": "#000"
 						},
 						"button": {
 							"background": "#f1d600"
 						}
+					},
+					cookie: {
+						name: 'cookieconsent_login'
 					}
 				})
 			});
@@ -223,7 +226,7 @@
 			<div class="footer is-center">
 				<noscript>Warning! JavaScript must be enabled for proper operation of the Administrator back-end.</noscript>
 				<p class="copyright">
-					<a href="http://savannah.nongnu.org/projects/fmsystem/" target="_blank">{system} {version}</a> is Free Software released under the <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU/GPL License</a>.
+					<a href="https://github.com/PorticoEstate/PorticoEstate" target="_blank">{system} {version}</a> is Free Software released under the <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU/GPL License</a>.
 				</p>
 			</div>
 			<!-- END footer_block -->

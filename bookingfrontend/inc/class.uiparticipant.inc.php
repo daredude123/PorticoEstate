@@ -8,6 +8,7 @@
 		public $public_functions = array
 			(
 			'add' => true,
+			'ical' => true,
 			'index' => true
 		);
 		protected $module;
@@ -18,6 +19,109 @@
 			$this->resource_bo = CreateObject('booking.boresource');
 			$this->group_bo = CreateObject('booking.bogroup');
 			$this->module = "bookingfrontend";
+		}
+
+		function ical()
+		{
+			$GLOBALS['phpgw_info']['flags']['noheader']	 = true;
+			$GLOBALS['phpgw_info']['flags']['nofooter']	 = true;
+			$GLOBALS['phpgw_info']['flags']['xslt_app']	 = false;
+
+			$config = CreateObject('phpgwapi.config', 'booking')->read();
+
+			$reservation_type	 = phpgw::get_var('reservation_type');
+			$reservation_id		 = phpgw::get_var('reservation_id', 'int');
+
+			$reservation = createObject("booking.bo{$reservation_type}")->read_single($reservation_id);
+			$resource_paricipant_limit_gross = CreateObject('booking.soresource')->get_paricipant_limit($reservation['resources'], true);
+
+			$resources = $this->resource_bo->so->read(array('filters' => array('id' => $reservation['resources']),'sort' => 'name'));
+			$res_names = array();
+			foreach ($resources['results'] as $res)
+			{
+				$res_names[] = $res['name'];
+			}
+
+			$reservation['resource_info'] = join(', ', $res_names);
+
+			$start = $reservation['from_'];
+			$end = $reservation['to_'];
+
+			$cal_name	 = !empty($GLOBALS['phpgw_info']['server']['site_title']) ? $GLOBALS['phpgw_info']['server']['site_title'] : $GLOBALS['phpgw_info']['server']['system_name'];
+
+//			$timezone	 = !empty($GLOBALS['phpgw_info']['user']['preferences']['common']['timezone']) ? $GLOBALS['phpgw_info']['user']['preferences']['common']['timezone'] : 'UTC';
+			$uid = date("Ymd\TGis") . rand() . "@" . $cal_name;
+			$dtstamp = date("Ymd\TGis");
+//			$dtstart = (new DateTime($start, new DateTimezone($timezone)))->format("Ymd\THis");
+//			$dtend = (new DateTime($end, new DateTimezone($timezone)))->format("Ymd\THis");
+			$dtstart = (new DateTime($start))->format("Ymd\THis");
+			$dtend = (new DateTime($end))->format("Ymd\THis");
+
+
+
+			$resource_paricipant_limit = false;
+
+			if(!empty($resource_paricipant_limit_gross['results'][0]['quantity']))
+			{
+				$resource_paricipant_limit = $resource_paricipant_limit_gross['results'][0]['quantity'];
+			}
+
+			if(!empty($reservation['participant_limit']))
+			{
+				$resource_paricipant_limit = $reservation['participant_limit'];
+			}
+			else
+			{
+				$resource_paricipant_limit = $resource_paricipant_limit ? $resource_paricipant_limit : (int)$config['participant_limit'];
+			}
+
+			$description = "<h1>{$reservation['resource_info']}</h1>";
+			$description .= !empty($config['participanttext'])? $config['participanttext'] :'';
+
+			if($resource_paricipant_limit)
+			{
+				$external_site_address = !empty($config['external_site_address'])? $config['external_site_address'] : $GLOBALS['phpgw_info']['server']['webserver_url'];
+
+				$participant_registration_link = $external_site_address
+					. "/bookingfrontend/?menuaction=bookingfrontend.uiparticipant.add"
+					. "&reservation_type={$reservation_type}"
+					. "&reservation_id={$reservation_id}";
+
+				$description.= "</br><a href='{$participant_registration_link}'><b>Innregistrering her</b></a>";
+			}
+
+			$ical = <<<ICAL
+BEGIN:VCALENDAR
+PRODID: bookingfrontend {$cal_name}
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-TIMEZONE:{$timezone}
+BEGIN:VEVENT
+DTSTAMP:{$dtstamp}
+DTSTART:{$dtstart}
+DTEND:{$dtend}
+SEQUENCE:0
+CLASS:PUBLIC
+STATUS:TENTATIVE
+SUMMARY:Kalenderoppføring fra Aktiv kommune
+TRANSP:OPAQUE
+LOCATION:{$reservation['building_name']}
+DESCRIPTION:{$reservation['resource_info']}
+X-ALT-DESC;FMTTYPE=text/html:$description
+UID:{$uid}
+BEGIN:VALARM
+TRIGGER:-PT1H
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+END:VCALENDAR
+ICAL;
+
+			$browser = CreateObject('phpgwapi.browser');
+			$browser->content_header('cal.ics', 'text/calendar', filesize($ical));
+			echo $ical;
+
 		}
 
 		public function add()
@@ -353,6 +457,28 @@
 				$name = $reservation['name'];
 			}
 
+			$holidays = phpgwapi_datetime::get_holidays(date('Y'));
+
+			$_from = new DateTime(date('Y-m-d H:i:s', strtotime($reservation['from_'])),$DateTimeZone);
+
+			$after_hour = false;
+
+			if(in_array($reservation_type,array('allocation')))
+			{
+				if(in_array($_from->format('Y-m-d'), $holidays))
+				{
+					$after_hour = true;
+				}
+				else if(in_array($_from->format('w'), array(0, 6))) // Sunday || Saturday
+				{
+					$after_hour = true;
+				}
+				else if($_from->format('H') > 15)
+				{
+					$after_hour = true;
+				}
+			}
+
 			$data = array
 			(
 				'participanttext'		 => !empty($config['participanttext'])? $config['participanttext'] :'',
@@ -366,11 +492,14 @@
 				'phone'					 => $participant['phone'],
 				'email'					 => $participant['email'],
 				'quantity'				 => $participant['quantity'],
+				'after_hour'			 => $after_hour,
 				'name'					 => $name,
 				'reservation'			 => $reservation,
 				'participant_limit'		 => $participant_limit,
 				'form_action'			 => self::link(array('menuaction'		 => 'bookingfrontend.uiparticipant.add',
 					'reservation_type'	 => $reservation_type, 'reservation_id'	 => $reservation_id)),
+				'ical_link' => self::link(array('menuaction' => 'bookingfrontend.uiparticipant.ical','reservation_type' => $reservation_type, 'reservation_id' => $reservation_id))
+
 			);
 
 			if($enable_register_form)
@@ -385,28 +514,27 @@
 
 		public function index()
 		{
-			if(!CreateObject('bookingfrontend.bouser')->is_logged_in())
+			$results = array();
+
+			if(CreateObject('bookingfrontend.bouser')->is_logged_in())
 			{
-				return array();
-			}
+				$_REQUEST['filter_reservation_id'] = phpgw::get_var('filter_reservation_id', 'int', 'REQUEST', -1);
+				$participants = $this->bo->read();
 
+				$data = array('results' => array(), 'total_records' => 0, 'start' => 0, 'sort' => $participants['sort'], 'dir' => $participants['dir']);
 
-			$_REQUEST['filter_reservation_id'] = phpgw::get_var('filter_reservation_id', 'int', 'REQUEST', -1);
-			$participants = $this->bo->read();
-
-			$data = array('results' => array(), 'total_records' => 0, 'start' => 0, 'sort' => $participants['sort'], 'dir' => $participants['dir']);
-
-			foreach ($participants['results'] as $participant)
-			{
-				if($participant['to_'])
+				foreach ($participants['results'] as $participant)
 				{
-					continue;
+					if($participant['to_'])
+					{
+						continue;
+					}
+					$data['results'][] = $participant;
+					$data['total_records'] += 1;
 				}
-				$data['results'][] = $participant;
-				$data['total_records'] += 1;
-			}
 
-			$results = $this->jquery_results($data);
+				$results = $this->jquery_results($data);
+			}
 
 			return $results;
 		}

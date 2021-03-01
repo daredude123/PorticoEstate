@@ -72,7 +72,10 @@
 				'responsible_street' => 'string',
 				'responsible_zip_code' => 'string',
 				'responsible_city' => 'string',
-				'agreement_requirements' => 'html'
+				'agreement_requirements' => 'html',
+				'customer_organization_id' => 'string',
+				'customer_organization_name' => 'string',
+				'customer_identifier_type' => 'string'
 			);
 
 			$this->display_name = lang('application');
@@ -607,9 +610,83 @@
 			return $comment_text;
 		}
 
+		public function set_block()
+		{
+			$resource_id = phpgw::get_var('resource_id', 'int' ,'REQUEST', -1 );
+			$from_ = (new DateTime(phpgw::get_var('from_')));
+			$to_ = (new DateTime(phpgw::get_var('to_')));
+
+			$timezone	 = !empty($GLOBALS['phpgw_info']['user']['preferences']['common']['timezone']) ? $GLOBALS['phpgw_info']['user']['preferences']['common']['timezone'] : 'UTC';
+
+			try
+			{
+				$DateTimeZone	 = new DateTimeZone($timezone);
+			}
+			catch (Exception $ex)
+			{
+				throw $ex;
+			}
+
+			$from_->setTimezone($DateTimeZone);
+			$to_->setTimezone($DateTimeZone);
+
+			$bo_block = createObject('booking.boblock');
+
+			$session_id = $GLOBALS['phpgw']->session->get_session_id();
+			$previous_block = $bo_block->so->read(array(
+				'filters' => array('where' =>  "(bb_block.active = 1"
+					. " AND bb_block.session_id = '{$session_id}'"
+					. " AND bb_block.resource_id = {$resource_id}"
+					. " AND bb_block.from_ = '" . $from_->format('Y-m-d H:i:s') . "'"
+					. " AND bb_block.to_ = '" . $to_->format('Y-m-d H:i:s') . "')"),
+				'results' => 1));
+
+
+			$collision = false;
+			$status = '';
+			$message = '';
+			if($previous_block['total_records'] > 0)
+			{
+				$status = 'registered';
+				return array(
+					'status' => $status,
+					'message'	=> $message
+				);
+			}
+			else
+			{
+				$collision = $this->bo->so->check_collision(array($resource_id), $from_->format('Y-m-d H:i:s'), $to_->format('Y-m-d H:i:s'));
+			}
+
+			if ($collision)
+			{
+				$status = 'reserved';
+			}
+			else
+			{
+				$block = array(
+					'session_id'	=> $session_id,
+					'resource_id'	=> $resource_id,
+					'from_'			=> $from_->format('Y-m-d H:i:s'),
+					'to_'			=> $to_->format('Y-m-d H:i:s')
+					);
+				$receipt = $bo_block->add($block);
+				if($receipt['id'])
+				{
+					$status = 'saved';
+					$message = $receipt['message'][0]['msg'];
+				}
+			}
+
+			return array(
+				'status' => $status,
+				'message'	=> $message
+			);
+		}
+
 		public function add()
 		{
-			$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
+			$organization_number = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
 
 			$building_id = phpgw::get_var('building_id', 'int' ,'REQUEST', -1 );
 			$simple = phpgw::get_var('simple', 'bool');
@@ -763,7 +840,12 @@
 						}
 					}
 				}
-				if (!$audval_present)
+
+				if($is_partial1 && !$audval_present)
+				{
+					$application['audience'] = -1; // Dummy
+				}
+				else if (!$audval_present)
 				{
 					$errors['audience'] = lang("Select a target audience");
 				}
@@ -891,10 +973,31 @@
 			{
 				$default_dates = array_map(array($this, '_combine_dates'), phpgw::get_var('from_', 'string'), phpgw::get_var('to_', 'string'));
 			}
+			else if (phpgw::get_var('start', 'bool'))
+			{
+				$timezone	 = !empty($GLOBALS['phpgw_info']['user']['preferences']['common']['timezone']) ? $GLOBALS['phpgw_info']['user']['preferences']['common']['timezone'] : 'UTC';
+
+				try
+				{
+					$DateTimeZone	 = new DateTimeZone($timezone);
+				}
+				catch (Exception $ex)
+				{
+					throw $ex;
+				}
+
+				$_start_time =  (new DateTime(date('Y-m-d H:i:s', phpgw::get_var('start', 'int')/1000)));
+				$_end_time = ( new DateTime(date('Y-m-d H:i:s', phpgw::get_var('end', 'int')/1000)));
+				$_start_time->setTimezone($DateTimeZone);
+				$_end_time->setTimezone($DateTimeZone);
+
+				$default_dates = array_map(array($this, '_combine_dates'), (array) $_start_time->format('Y-m-d H:i:s'),(array)$_end_time->format('Y-m-d H:i:s'));
+			}
 			else
 			{
 				$default_dates = array_map(array($this, '_combine_dates'), array(), array());
 			}
+
 			array_set_default($application, 'dates', $default_dates);
 
 			$this->flash_form_errors($errors);
@@ -942,11 +1045,11 @@
 			$this->install_customer_identifier_ui($application);
 
 			$application['customer_identifier_types']['ssn'] = 'SSN';
-			if ($orgnr)
+			if ($organization_number)
 			{
 				$application['customer_identifier_type'] = 'organization_number';
-				$application['customer_organization_number'] = $orgnr;
-				$orgid = $this->organization_bo->so->get_orgid($orgnr);
+				$application['customer_organization_number'] = $organization_number;
+				$orgid = $this->organization_bo->so->get_orgid($organization_number);
 				$organization = $this->organization_bo->read_single($orgid);
 				if ($organization['contacts'][0]['name'] != '')
 				{
@@ -998,11 +1101,6 @@
 				phpgwapi_jquery::formvalidator_generate(array('location', 'date', 'security',
 					'file'), 'application_form');
 			}
-//			else
-//			{
-//				self::add_javascript('bookingfrontend', 'base', 'application.js');
-//			}
-
 
 			// Get resources
 			$resource_filters = array('active' => 1, 'rescategory_active' => 1, 'building_id' => $building_id );
@@ -1094,11 +1192,13 @@
 			else
 			{
 				$template = 'application_new';
+			}
+
+			if($GLOBALS['phpgw_info']['flags']['currentapp'] == 'bookingfrontend' && !$simple)
+			{
 				$GLOBALS['phpgw']->js->add_external_file("phpgwapi/templates/bookingfrontend/js/build/aui/aui-min.js");
 				self::add_javascript('bookingfrontend', 'base', 'application_new.js', 'text/javascript', true);
 			}
-
-
 
 			self::render_template_xsl($template, array(
 				'application' => $application,
@@ -1125,9 +1225,9 @@
 				'menuaction' => 'bookingfrontend.uiapplication.add_contact'
 			));
 
-			if(!$orgnr = phpgw::get_var('session_org_id', 'int', 'GET'))
+			if(!$organization_number = phpgw::get_var('session_org_id', 'string', 'GET'))
 			{
-				$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);			
+				$organization_number = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
 			}
 
 			$errors = array();
@@ -1137,6 +1237,34 @@
 			if ($_SERVER['REQUEST_METHOD'] == 'POST')
 			{
 				$partial2 = $this->extract_form_data();
+
+				$customer_organization_number_arr			 = explode('_', phpgw::get_var('customer_organization_number'));
+				if (!empty($customer_organization_number_arr[0]))
+				{
+					$partial2['customer_organization_id']		 = $customer_organization_number_arr[0];
+					$partial2['customer_organization_number']	 = $customer_organization_number_arr[1];
+					$organization								 = $this->organization_bo->read_single(intval($customer_organization_number_arr[0]));
+					$partial2['customer_organization_name']		 = $organization['name'];
+
+					$update_org = false;
+					if(!$organization['customer_identifier_type'] == 'organization_number')
+					{
+						$organization['customer_identifier_type'] = 'organization_number';
+						$update_org = true;
+					}
+
+					if(!empty($customer_organization_number_arr[1]) && empty($organization['customer_organization_number']))
+					{
+						$organization['customer_organization_number'] = $customer_organization_number_arr[1];
+						$update_org = true;
+					}
+
+					if($update_org && !$this->organization_bo->validate($organization))
+					{
+						$this->organization_bo->update($organization);
+					}
+				}
+
 				// Application contains only contact details. Use dummy values for event fields
 				$dummyfields_string = array('building_name','name','organizer','secret','status');
 				foreach ($dummyfields_string as $field)
@@ -1180,8 +1308,9 @@
 					else
 					{
 						$partial2_fields = array('contact_email','contact_name','contact_phone',
-							'customer_identifier_type','customer_organization_number','customer_ssn',
-							'responsible_city','responsible_street','responsible_zip_code');
+							'customer_identifier_type','customer_organization_number','customer_organization_id',
+							'customer_organization_name','customer_ssn',
+							'responsible_city','responsible_street','responsible_zip_code', 'audience');
 						foreach ($partials['results'] as &$application)
 						{
 							// Remove certain unused fields from the update
@@ -1206,6 +1335,7 @@
 
 							$receipt = $this->bo->update($application);
 
+							$this->update_user_info($application, $external_login_info);
 
 							/**
 							 * Start direct booking
@@ -1242,7 +1372,7 @@
 								$collision_dates = array();
 								foreach ($application['dates'] as &$date)
 								{
-									$collision = $this->bo->so->check_collision($application['resources'], $date['from_'], $date['to_']);
+									$collision = $this->bo->so->check_collision($application['resources'], $date['from_'], $date['to_'], $session_id);
 									if ($collision)
 									{
 										$collision_dates[] = $date['from_'];
@@ -1286,6 +1416,8 @@
 
 								if (!$errors)
 								{
+									$bo_block = createObject('booking.boblock');
+									$bo_block->cancel_block($session_id, $application['dates'],$application['resources']);
 									$receipt = $booking_boevent->so->add($event);
 									$booking_boevent->so->update_id_string();
 									CreateObject('booking.souser')->collect_users($application['customer_ssn']);
@@ -1352,29 +1484,6 @@
 				}
 			}
 
-			$this->install_customer_identifier_ui($partial2);
-			if ($orgnr && $orgnr != '000000000')
-			{
-				$partial2['customer_identifier_type'] = 'organization_number';
-				$partial2['customer_organization_number'] = $orgnr;
-				$orgid = $this->organization_bo->so->get_orgid($orgnr);
-				$organization = $this->organization_bo->read_single($orgid);
-				if ($organization['contacts'][0]['name'] != '')
-				{
-					$partial2['contact_name'] = $organization['contacts'][0]['name'];
-					$partial2['contact_email'] = $organization['contacts'][0]['email'];
-					$partial2['contact_email2'] = $organization['contacts'][0]['email'];
-					$partial2['contact_phone'] = $organization['contacts'][0]['phone'];
-				}
-				else
-				{
-					$partial2['contact_name'] = $organization['contacts'][1]['name'];
-					$partial2['contact_email'] = $organization['contacts'][1]['email'];
-					$partial2['contact_email2'] = $organization['contacts'][1]['email'];
-					$partial2['contact_phone'] = $organization['contacts'][1]['phone'];
-				}
-			}
-
 			if(!empty($external_login_info['ssn']))
 			{
 				$user_id = CreateObject('booking.souser')->get_user_id($external_login_info['ssn']);
@@ -1423,19 +1532,98 @@
 			$partial2['cancel_link'] = self::link(array());
 			self::add_javascript('bookingfrontend', 'base', 'application.js');
 
+
+			if(!$bouser->is_logged_in())
+			{
+				$bouser->log_in();
+			}
+
+			$orgs = (array)phpgwapi_cache::session_get($bouser->get_module(), $bouser::ORGARRAY_SESSION_KEY);
+
+			$orgnumbers = array();
+			foreach ($orgs as $org)
+			{
+				$orgnumbers[] = $org['orgnumber'];
+			}
+
+			$session_org_id = phpgw::get_var('session_org_id');
+
+			if($session_org_id && in_array($session_org_id, $orgnumbers))
+			{
+				$organization_number = $session_org_id;
+			}
+			else
+			{
+				$organization_number = $bouser->orgnr;
+
+			}
+
+			$delegate_data = CreateObject('booking.souser')->get_delegate($external_login_info['ssn'], $organization_number);
+
+			$filtered_delegate_data = array();
+			foreach ($delegate_data as $delegate_entry)
+			{
+				if($delegate_entry['active'])
+				{
+					$filtered_delegate_data[] = $delegate_entry;
+				}
+			}
+
 			/**
 			 * This one is for bookingfrontend
 			 */
 			self::add_javascript('bookingfrontend', 'base', 'application_contact.js', 'text/javascript', true);
 
 			self::render_template_xsl('application_contact', array(
-				'application' => $partial2,
-				'config' => CreateObject('phpgwapi.config', 'booking')->read()
+				'application'			 => $partial2,
+				'delegate_data'			 => $filtered_delegate_data,
+				'add_img'				 => $GLOBALS['phpgw']->common->image('phpgwapi', 'add2'),
+				'config'				 => CreateObject('phpgwapi.config', 'booking')->read()
 				)
 			);
 		}
 
+		private function update_user_info($application, $external_login_info = array() )
+		{
+			if(empty($external_login_info['ssn']))
+			{
+				return;
+			}
 
+			$user_id = CreateObject('booking.souser')->get_user_id($external_login_info['ssn']);
+			if($user_id)
+			{
+				$bo_user = CreateObject('booking.bouser');
+				$user	 = $bo_user->read_single($user_id);
+
+				$update_user = false;
+				if(empty($user['email']) && $application['contact_email'])
+				{
+					$update_user = true;
+					$user['email'] = $application['contact_email'];
+				}
+				if(empty($user['street']) && $application['responsible_street'])
+				{
+					$update_user = true;
+					$user['street'] = $application['responsible_street'];
+				}
+				if(empty($user['zip_code']) && $application['responsible_street'])
+				{
+					$update_user = true;
+					$user['zip_code'] = $application['responsible_zip_code'];
+				}
+				if(empty($user['city']) && $application['responsible_city'])
+				{
+					$update_user = true;
+					$user['city'] = $application['responsible_city'];
+				}
+
+				if($update_user && !$bo_user->validate($user))
+				{
+					$bo_user->update($user);
+				}
+			}
+		}
 		public function confirm() {
         	self::render_template_xsl('application_new_confirm', array());
         }
@@ -1443,6 +1631,10 @@
 		public function edit()
 		{
 			$id = phpgw::get_var('id', 'int');
+			if (!$id)
+			{
+				phpgw::no_access('booking', lang('missing id'));
+			}
 			$application = $this->bo->read_single($id);
 
 			$resource_paricipant_limit_gross = CreateObject('booking.soresource')->get_paricipant_limit($application['resources'], true);
@@ -1592,7 +1784,8 @@
 			$copy = array(
 				'activity_id', 'name', 'organizer', 'homepage', 'description', 'equipment', 'contact_name',
 				'contact_email', 'contact_phone', 'activity_id', 'building_id', 'building_name',
-				'customer_identifier_type', 'customer_ssn', 'customer_organization_number'
+				'customer_identifier_type', 'customer_ssn', 'customer_organization_number',
+				'customer_organization_id',	'customer_organization_name'
 			);
 			foreach ($copy as $f)
 			{
@@ -1650,7 +1843,7 @@
 			{
 				phpgw::no_access('booking', lang('not case officer'));
 			}
-			
+
 			$preview = phpgw::get_var('preview', 'bool');
 
 			$GLOBALS['phpgw_info']['flags']['noheader']	 = true;
@@ -1810,7 +2003,7 @@
 				}
 				$this->redirect(array('menuaction' => $this->url_prefix . '.show', 'id' => $application['id'], 'return_after_action' => true));
 			}
-			
+
 		}
 		public function show()
 		{
@@ -2005,7 +2198,7 @@
 					}
 				}
 
-				if($_building_simple_booking == count($resource_ids))
+				if($_building_simple_booking == count($application['resources']))
 				{
 					$simple = true;
 				}
@@ -2154,11 +2347,16 @@ JS;
 			if (!empty($session_id) && $id > 0)
 			{
 				$partials = $this->get_partials($session_id);
+
+				$GLOBALS['phpgw']->db->transaction_begin();
+
 				$exists = false;
 				foreach ($partials as $partial)
 				{
 					if ($partial['id'] == $id)
 					{
+						$bo_block = createObject('booking.boblock');
+						$bo_block->cancel_block($session_id, $partial['dates'],$partial['resources']);
 						$exists = true;
 						break;
 					}
@@ -2168,6 +2366,9 @@ JS;
 					$this->bo->delete_application($id);
 					$status['deleted'] = true;
 				}
+
+				$GLOBALS['phpgw']->db->transaction_commit();
+
 			}
 			return $status;
 		}

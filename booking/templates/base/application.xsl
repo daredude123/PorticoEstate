@@ -477,6 +477,17 @@
 									<h3>7. <xsl:value-of select="php:function('lang', 'responsible applicant')" /> / <xsl:value-of select="php:function('lang', 'invoice information')" /></h3>
 								</legend>
 							</div>
+							<xsl:if test="application/customer_organization_name != ''">
+								<div class="pure-control-group">
+									<label>
+										<xsl:value-of select="php:function('lang', 'Organization')" />
+									</label>
+									<span>
+										<xsl:value-of select="application/customer_organization_name"/>
+									</span>
+								</div>
+							</xsl:if>
+
 							<div class="pure-control-group">
 								<xsl:if test="application/customer_identifier_type = 'organization_number'">
 									<label>
@@ -720,7 +731,7 @@
 
 		]]>
 
-		var colDefsResources = [{key: 'name', label: lang['Resources'], formatter: genericLink}, {key: 'type', label: lang['Resource Type']}];
+		var colDefsResources = [{key: 'name', label: lang['Resources'], formatter: genericLink}, {key: 'rescategory_name', label: lang['Resource Type']}];
 
 		if (currentuser == 1) {
 		var colDefsAssociated = [

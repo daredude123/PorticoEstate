@@ -137,7 +137,10 @@
 		'bb_rescategory' => array(
 			'fd' => array(
 				'id' => array('type' => 'auto', 'nullable' => false),
+				'parent_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
 				'name' => array('type' => 'varchar', 'precision' => '100', 'nullable' => false),
+				'capacity' => array('type' => 'int', 'precision' => 2, 'nullable' => True),
+				'e_lock' => array('type' => 'int', 'precision' => 2, 'nullable' => True),
 				'active' => array('type' => 'int', 'nullable' => false, 'precision' => '4', 'default' => 1),
 			),
 			'pk' => array('id'),
@@ -174,7 +177,6 @@
 				'id' => array('type' => 'auto', 'nullable' => false),
 				'active' => array('type' => 'int', 'nullable' => False, 'precision' => '4', 'default' => 1),
 				'name' => array('type' => 'varchar', 'precision' => '150', 'nullable' => False),
-				'type' => array('type' => 'varchar', 'precision' => '50', 'nullable' => False),
 				'description' => array('type' => 'text', 'nullable' => True),
 				'activity_id' => array('type' => 'int', 'precision' => '4', 'nullable' => False),
 				'sort' => array('type' => 'int', 'precision' => '4', 'nullable' => False, 'default' => 0),
@@ -194,6 +196,7 @@
 				'simple_booking_end_date' => array('type' => 'int', 'nullable' => true, 'precision' => 8),
 				'booking_month_horizon' => array('type' => 'int', 'nullable' => true, 'precision' => 4),
 				'booking_day_horizon' => array('type' => 'int', 'nullable' => true, 'precision' => 4),
+				'capacity' => array('type' => 'int', 'nullable' => true, 'precision' => 4),
 			),
 			'pk' => array('id'),
 			'fk' => array(
@@ -354,6 +357,9 @@
 				'secret' => array('type' => 'text', 'nullable' => False),
 				'owner_id' => array('type' => 'int', 'precision' => '4', 'nullable' => False),
 				'case_officer_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
+				'customer_organization_name' => array('type' => 'varchar', 'precision' => 150,
+					'nullable' => True),
+				'customer_organization_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 				'customer_identifier_type' => array('type' => 'varchar', 'precision' => '255',
 					'nullable' => True),
 				'customer_organization_number' => array('type' => 'varchar', 'precision' => '9',
@@ -374,6 +380,21 @@
 				'phpgw_accounts' => array('owner_id' => 'account_id'),
 				'phpgw_accounts' => array('case_officer_id' => 'account_id'),
 			),
+			'ix' => array(),
+			'uc' => array()
+		),
+		'bb_block' => array(
+			'fd' => array(
+				'id'		 => array('type' => 'auto', 'nullable' => false),
+				'active'	 => array('type' => 'int', 'precision' => 2, 'nullable' => false, 'default' => 1),
+				'from_'		 => array('type' => 'timestamp', 'nullable' => false),
+				'to_'		 => array('type' => 'timestamp', 'nullable' => false),
+				'entry_time' => array('type' => 'timestamp', 'nullable' => false, 'default' => 'current_timestamp'),
+				'session_id' => array('type' => 'varchar', 'precision' => 64, 'nullable' => true),
+				'resource_id'  => array('type' => 'int', 'precision' => 4, 'nullable' => false),
+			),
+			'pk' => array('id'),
+			'fk' => array(),
 			'ix' => array(),
 			'uc' => array()
 		),

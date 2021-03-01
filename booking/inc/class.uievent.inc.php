@@ -40,7 +40,8 @@
 				'building_id', 'building_name',
 				'contact_name', 'contact_email', 'contact_phone',
 				'from_', 'to_', 'active', 'audience', 'reminder',
-				'is_public', 'sms_total', 'participant_limit','customer_internal', 'include_in_list');
+				'is_public', 'sms_total', 'participant_limit','customer_internal', 'include_in_list',
+				'customer_organization_name','customer_organization_id');
 
 			$this->display_name = lang('events');
 			$GLOBALS['phpgw_info']['flags']['app_header'] = lang('booking') . "::{$this->display_name}";
@@ -406,7 +407,7 @@
 					}
 				}
 
-				$event['dates'] = array_map(array($this, '_combine_dates'), $_POST['from_'], $_POST['to_']);
+				$event['dates'] = array_map(array($this, '_combine_dates'),(array)$_POST['from_'], (array)$_POST['to_']);
 
 				array_set_default($_POST, 'resources', array());
 				$event['active'] = '1';
@@ -658,6 +659,10 @@
 		public function edit()
 		{
 			$id = phpgw::get_var('id', 'int');
+			if (!$id)
+			{
+				phpgw::no_access('booking', lang('missing id'));
+			}
 			$event = $this->bo->read_single($id);
 
 			$resource_paricipant_limit_gross = CreateObject('booking.soresource')->get_paricipant_limit($event['resources'], true);
@@ -1120,7 +1125,7 @@
 			$agegroups = $agegroups['results'];
 			$audience = $this->audience_bo->fetch_target_audience($top_level_activity);
 			$audience = $audience['results'];
-			$event['audience_json'] = json_encode(array_map('intval', $event['audience']));
+			$event['audience_json'] = json_encode(array_map('intval', (array)$event['audience']));
 
 			$this->install_customer_identifier_ui($event);
 			$this->add_template_helpers();

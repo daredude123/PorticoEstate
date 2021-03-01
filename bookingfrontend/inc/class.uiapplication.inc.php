@@ -14,6 +14,7 @@
 			'show' => true,
 			'get_activity_data' => true,
 			'get_partials' => true,
+			'set_block'		=> true
 		);
 
 		function get_activity_data()
@@ -152,7 +153,7 @@
 					}
 				}
 
-				if ($_building_simple_booking == count($resource_ids))
+				if ($_building_simple_booking == count($application['resources']))
 				{
 					$simple = true;
 				}

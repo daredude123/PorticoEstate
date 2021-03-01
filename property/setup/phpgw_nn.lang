@@ -906,7 +906,8 @@ import from csv	property	nn	Fil-import til Faktura
 import invoice	property	nn	Import faktura
 import this invoice	property	nn	Importer denne fakturaen
 import vcard	common	nn	Importer visittkort
-incl tax	property	nn	inkl mva
+incl tax	property	nn	inkl. mva
+ex tax	property	nn		eks. mva
 include in location form	property	nn	Inkluder i lokaliseringsskjema
 include in search	property	nn	Inkluder i søk
 include the workorder to this claim	property	nn	Inkluder bestillingen i dette kravet
@@ -2275,6 +2276,7 @@ request status on ticket hookup	property	nn	Behovsstatus ved meldingsoppkobling
 workorder status that are to be set when invoice is processed	property	nn	Arbeidsordre status som skal settes når fakturaen er behandlet
 workorder reopen status that are to be set when invoice is processed	property	nn	Arbeidsordre gjenåpne-status som skal settes når fakturaen er behandlet
 require building part at workorder	property	nn	Krever bygningsdel på arbeidsordre
+require tax code at workorder	property	nn	Krever MVA-kode på arbeidsordre
 require vendor at workorder	property	nn	Krever leverandør på arbeidsordre
 delay operation workorder end date	property	nn	Utsett sluttdato for driftsarbeidsordre
 last day in year	property	nn	siste dag i året
@@ -2408,3 +2410,4 @@ filter tag	property	nn	Filtrer på tag
 set tag	property	nn	Legg til tag
 remove tag	property	nn	Slett tag
 transfer to external	property	nn	Overfør til eksternt system
+default tax code	property	nn	Standard mva-kode

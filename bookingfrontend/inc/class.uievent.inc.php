@@ -146,7 +146,7 @@
 			$date = substr($event['from_'], 0, 10);
 			self::add_javascript('bookingfrontend', 'base', 'event.js');
 			$event['resources_json'] = json_encode(array_map('intval', $event['resources']));
-			$event['audiences_json'] = json_encode(array_map('intval', $event['audience']));
+			$event['audiences_json'] = json_encode(array_map('intval', (array)$event['audience']));
 			$event['agegroups_json'] = json_encode($event['agegroups']);
 			$event['cancel_link'] = self::link(array('menuaction' => 'bookingfrontend.uibuilding.show',
 					'id' => $event['building_id'], 'date' => $date));
@@ -433,6 +433,8 @@
 			{
 				$resource_paricipant_limit = $resource_paricipant_limit_gross['results'][0]['quantity'];	
 			}
+
+			$event['ical_link'] = self::link(array('menuaction' => 'bookingfrontend.uiparticipant.ical','reservation_type' => 'event','reservation_id' => $event['id']));
 			
 			if(!$event['participant_limit'])
 			{
