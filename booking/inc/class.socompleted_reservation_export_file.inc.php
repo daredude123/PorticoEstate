@@ -252,11 +252,6 @@
 					$this->db_query($sql, __LINE__, __FILE__);
 				}
 
-//				$this->db_query(
-//					join(";\n", $export_conf_updates),
-//					__LINE__, __FILE__
-//				);
-
 				if ($this->db->transaction_commit())
 				{
 					return $entity_export_files;
